@@ -21,19 +21,42 @@ const list = [
   }
 ];
 
+const words = ['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present'];
+const filteredWords = words.filter(word => word.length > 6);
+console.log(filteredWords)
+
 class App extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      list,
+    };
+
+    this.onDismiss = this.onDismiss.bind(this);
+  }
+
+  onDismiss(id) {
+    const updatedList = this.state.list.filter(item => item.objectID !== id);
+    this.setState({list: updatedList});
+  }
+
   render() {
     // const helloWorld = 'Welcome to the Learning experience';
-
     return (
       <div className="App">
         {
-          list.map(item => 
+          this.state.list.map(item => 
             <div key={item.objectID}>
               <span><a href = {item.url}>{item.title}</a></span>
               <span>{item.author}</span>
               <span>{item.num_comments}</span>
               <span>{item.points}</span>
+              <span>
+                <button onClick={() => this.onDismiss(item.objectID)} type="button">
+                  Dismiss
+                </button>
+              </span>
             </div>
          )
         }
