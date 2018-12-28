@@ -2,40 +2,10 @@ import React, { Component } from 'react';
 // import logo from './logo.svg';
 import './App.css';
 
-const DEFAULT_QUERY = 'redux';
+const DEFAULT_QUERY = '';
 const PATH_BASE = 'https://hn.algolia.com/api/v1';
 const PATH_SEARCH = '/search';
 const PARAM_QUERY = 'query=';
-const URL = `${PATH_BASE}${PATH_SEARCH}?${PARAM_QUERY}${DEFAULT_QUERY}`;
-
-const list = [
-  {
-    title: 'React',
-    url: 'https://reactjs.org',
-    author: 'Nik G',
-    num_comments: 3,
-    points: 4,
-    objectID: 0,
-  },
-  {
-    title: 'Redux',
-    url: 'https://redux.js.org/',
-    author: 'Another Nik G',
-    num_comments: 2,
-    points: 5,
-    objectID: 1,
-  },
-  {
-    title: 'Moop',
-    url: 'https://bloop.js.org/',
-    author: 'Another Nik G',
-    num_comments: 2,
-    points: 5,
-    objectID: 2,
-  },
-];
-
-const isSearched = (searchTerm) => (item) => item.title.toLowerCase().includes(searchTerm.toLowerCase())
 
 const words = ['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present'];
 const filteredWords = words.filter(word => word.length > 6);
@@ -46,12 +16,31 @@ class App extends Component {
     super(props);
 
     this.state = {
-      list,
-      searchTerm: ''
+      result: null,
+      searchTerm: DEFAULT_QUERY
     };
 
+    this.setSearchTopStories = this.setSearchTopStories.bind(this);
+    this.fetchSearchTopStories = this.fetchSearchTopStories.bind(this);
     this.onDismiss = this.onDismiss.bind(this);
     this.onSearchChange = this.onSearchChange.bind(this);
+    this.onSearchSubmit = this.onSearchSubmit.bind(this);
+  }
+
+  setSearchTopStories(result) {
+    this.setState({result});
+  }
+
+  fetchSearchTopStories(searchTerm) {
+    fetch (`${PATH_BASE}${PATH_SEARCH}?${PARAM_QUERY}${searchTerm}`)
+      .then(response => response.json())
+      .then(result => this.setSearchTopStories(result))
+      .catch(error => error);
+  }
+
+  componentDidMount() {
+    const {searchTerm} = this.state;
+    this.fetchSearchTopStories(searchTerm);
   }
 
   onSearchChange(event) {
@@ -60,15 +49,28 @@ class App extends Component {
     });
   }
 
+  onSearchSubmit(event) {
+    const {searchTerm} = this.state;
+    this.fetchSearchTopStories(searchTerm);
+    //This stops the default behavior of a submitted form in the browser that causes a page refresh.
+    event.preventDefault();
+  }
+
   onDismiss(id) {
-    const updatedList = this.state.list.filter(item => item.objectID !== id);
-    this.setState({list: updatedList});
+    const isNotId = item => item.objectID !== id
+    const updatedHits = this.state.result.hits.filter(isNotId);
+    this.setState({
+      // Basically copies everything from subsequent arguments into {}, empty object
+      // result: Object.assign({}, this.state.result, {hits: updatedHits} )
+      // or just use the spread operator on the map
+      result: {...this.state.result, hits: updatedHits}
+    });
   }
 
   render() {
     // const helloWorld = 'Welcome to the Learning experience';
     const {
-      list, 
+      result, 
       searchTerm
     } = this.state;
 
@@ -78,14 +80,18 @@ class App extends Component {
         <div className="interactions">
           <Search 
             value = {searchTerm} 
-            onChange ={this.onSearchChange}>
+            onChange ={this.onSearchChange}
+            onSubmit ={this.onSearchSubmit}>
             Search
           </Search>
         </div>
-        <Table 
-          list={list} 
-          searchTerm={searchTerm} 
-          onDismiss={this.onDismiss}/>
+        {
+          result ?
+            <Table 
+              list={result.hits} 
+              onDismiss={this.onDismiss}/>
+            : null
+        }
       </div>
     );
   }
@@ -96,12 +102,16 @@ class App extends Component {
     // const {value, onChange, children} = this.props
 //Turns out you can also destructure function parameters (eg props)
 
- const Search = ({value, onChange, children}) =>
-      <form>
+ const Search = ({value, onChange, onSubmit, children}) =>
+      <form onSubmit = {onSubmit}>
         {children}
         <input type="text" 
         value = {value}
-        onChange = {onChange}/>
+        onChange = {onChange}
+        />
+        <button type = "submit">
+          children
+        </button>
       </form>
 
 const largeColumn = {
@@ -116,11 +126,9 @@ const smallColumn = {
   width: '10%'
 }
 
-const Table = ({list, searchTerm, onDismiss}) =>
+const Table = ({list, onDismiss}) =>
   <div className="table"> {
-      list.filter(
-        isSearched(searchTerm)
-      ).map(item => 
+      list.map(item => 
         <div key={item.objectID} className="table-row">
           <span style = {largeColumn}><a href = {item.url}>{item.title}</a></span>
           <span style = {mediumColumn}>{item.author}</span>
